@@ -48,7 +48,7 @@ def plot_gradient_descent_step_by_step(history):
         # Plot current point
         ax.scatter(history[i], quadratic_function(history[i]), color='red', s=100, label=f'Current Step {i+1}', zorder=5)
         ax.text(history[i], quadratic_function(history[i]), f'{history[i]:.2f}', fontsize=9, ha='right', va='bottom', color='red')
-        ax.annotate(f'{history[i - 1]:.2f}', (history[i - 1], quadratic_function(history[i - 1])), textcoords="offset points", xytext=(0,10), ha='center')
+        ax.annotate(f'{history[i - 1]:.2f}', (history[i - 1], quadratic_function(history[i - 1])), textcoords="offset points", xytext=(0,10), ha='center', color='green')
         ax.scatter(history[i - 1], quadratic_function(history[i - 1]), color='green', s=100, label=f'Previous Step {i}', zorder=5)
 
         if i < len(history) - 1:
@@ -57,7 +57,7 @@ def plot_gradient_descent_step_by_step(history):
 
         ax.legend()
         plot_placeholder.pyplot(fig)
-        time.sleep(0.5)  # Pause for a moment to visualize the step
+        time.sleep(1.0)  # Pause for a moment to visualize the step
 
 def main():
     st.write("### Gradient Descent Visualization")
