@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 import time
 
 def quadratic_function(x):
+    # return (x**4 - 15*x**3 + 80*x**2 - 180*x + 144) / 10
     return x**2
 
 def gradient_derivative(x):
+    # return (4*x**3 - 45*x**2 + 160*x - 180) / 10
     return 2 * x
 
 st.title("Interactive Gradient Descent Visualization")
