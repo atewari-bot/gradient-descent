@@ -57,7 +57,7 @@ def plot_gradient_descent_step_by_step(history):
             next_point = history[i + 1]
             ax.plot([history[i], next_point], [quadratic_function(history[i]), quadratic_function(next_point)], 'r--', alpha=0.5)
 
-        ax.legend()
+        ax.legend(loc='upper center')
         plot_placeholder.pyplot(fig)
         time.sleep(1.0)  # Pause for a moment to visualize the step
 
