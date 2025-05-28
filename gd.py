@@ -33,12 +33,14 @@ def plot_gradient_descent_step_by_step(history):
     fig, ax = plt.subplots(figsize=(10, 5))
     x = np.linspace(-10, 10, 400)
     y = quadratic_function(x)
+    dy = gradient_derivative(x)
     plot_placeholder = st.empty()
     plot_placeholder.pyplot(fig)
 
     for i in range(len(history) - 1):
         ax.clear()
         ax.plot(x, y, label='Quadratic Function $f(x) = x^2$', color='blue')
+        ax.plot(x, dy, label='Gradient Function $f\'(x) = 2x$', color='orange')
         ax.set_title('Gradient Descent Step-by-Step')
         ax.set_xlabel('x')
         ax.set_ylabel('f(x)')
