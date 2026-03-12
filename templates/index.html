@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Gradient Descent Visualization</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8f9fa; color: #333; }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+        h1 { font-size: 1.6rem; margin-bottom: 6px; }
+        .subtitle { color: #666; margin-bottom: 24px; font-size: 0.95rem; }
+        .controls { display: flex; gap: 24px; flex-wrap: wrap; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; align-items: flex-end; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 160px; }
+        .control-group label { font-weight: 600; font-size: 0.85rem; color: #555; }
+        .control-group input[type=range] { width: 100%; accent-color: #ff4b4b; }
+        .val { color: #ff4b4b; font-weight: 700; }
+        button { padding: 10px 28px; background: #ff4b4b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 600; white-space: nowrap; }
+        button:hover { background: #e03e3e; }
+        button:disabled { background: #ccc; cursor: default; }
+        .chart-card { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; padding: 4px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 16px; }
+        .stat { background: white; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .stat-label { font-size: 0.78rem; color: #888; margin-bottom: 4px; }
+        .stat-value { font-size: 1.2rem; font-weight: 700; color: #333; }
+        .math { background: white; border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; font-size: 0.9rem; color: #555; }
+        .math code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.95em; color: #333; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Interactive Gradient Descent Visualization</h1>
+    <p class="subtitle">Visualizes gradient descent on a simple quadratic function. Adjust the parameters and click Run.</p>
+
+    <div class="math">
+        Function: <code>f(x) = x²</code> &nbsp;|&nbsp; Gradient: <code>f'(x) = 2x</code> &nbsp;|&nbsp;
+        Update rule: <code>x ← x − α · f'(x)</code>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Learning Rate: <span class="val" id="lr-val">0.05</span></label>
+            <input type="range" id="learning-rate" min="0.01" max="0.1" step="0.01" value="0.05">
+        </div>
+        <div class="control-group">
+            <label>Iterations: <span class="val" id="iter-val">50</span></label>
+            <input type="range" id="iterations" min="10" max="200" step="5" value="50">
+        </div>
+        <div class="control-group">
+            <label>Initial Point: <span class="val" id="ip-val">10</span></label>
+            <input type="range" id="initial-point" min="-10" max="10" step="1" value="10">
+        </div>
+        <button id="run-btn" onclick="run()">Run</button>
+    </div>
+
+    <div class="chart-card" id="main-chart"></div>
+    <div class="chart-card" id="path-chart"></div>
+    <div class="stats" id="stats"></div>
+</div>
+
+<script>
+    document.getElementById('learning-rate').oninput = e => document.getElementById('lr-val').textContent = e.target.value;
+    document.getElementById('iterations').oninput = e => document.getElementById('iter-val').textContent = e.target.value;
+    document.getElementById('initial-point').oninput = e => document.getElementById('ip-val').textContent = e.target.value;
+
+    function linspace(start, end, n) {
+        return Array.from({length: n}, (_, i) => start + i * (end - start) / (n - 1));
+    }
+
+    async function run() {
+        const btn = document.getElementById('run-btn');
+        btn.disabled = true;
+        btn.textContent = 'Running…';
+
+        const lr = parseFloat(document.getElementById('learning-rate').value);
+        const iter = parseInt(document.getElementById('iterations').value);
+        const ip = parseFloat(document.getElementById('initial-point').value);
+
+        try {
+            const resp = await fetch('/api/compute', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({learning_rate: lr, iterations: iter, initial_point: ip})
+            });
+            const data = await resp.json();
+            renderMainChart(data.history, data.function_values);
+            renderPathChart(data.history);
+            renderStats(data.history, iter);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Run';
+        }
+    }
+
+    function renderMainChart(history, fvals) {
+        const x = linspace(-11, 11, 400);
+        const y = x.map(xi => xi * xi);
+        const dy = x.map(xi => 2 * xi);
+
+        const baseTraces = [
+            {x, y, type: 'scatter', mode: 'lines', name: 'f(x) = x²', line: {color: '#4c72b0', width: 2}},
+            {x, y: dy, type: 'scatter', mode: 'lines', name: "f'(x) = 2x", line: {color: '#dd8452', width: 2}},
+        ];
+
+        const frames = history.slice(0, -1).map((pt, i) => {
+            const traces = [
+                ...baseTraces,
+                {
+                    x: [history[i]], y: [fvals[i]],
+                    type: 'scatter', mode: 'markers+text',
+                    name: `Step ${i + 1}`,
+                    marker: {color: '#e74c3c', size: 14},
+                    text: [history[i].toFixed(2)], textposition: 'top right',
+                    showlegend: false,
+                },
+            ];
+            if (i > 0) {
+                traces.push({
+                    x: [history[i - 1]], y: [fvals[i - 1]],
+                    type: 'scatter', mode: 'markers',
+                    marker: {color: '#2ecc71', size: 12},
+                    showlegend: false,
+                });
+                traces.push({
+                    x: [history[i - 1], history[i]],
+                    y: [fvals[i - 1], fvals[i]],
+                    type: 'scatter', mode: 'lines',
+                    line: {color: '#e74c3c', dash: 'dot', width: 1.5},
+                    showlegend: false,
+                });
+            }
+            return {name: String(i), data: traces};
+        });
+
+        const layout = {
+            title: {text: 'Gradient Descent — Step by Step', font: {size: 15}},
+            xaxis: {title: 'x', range: [-11, 11], zeroline: true},
+            yaxis: {title: 'f(x)', range: [-15, 125], zeroline: true},
+            legend: {x: 0.5, y: 1, xanchor: 'center', orientation: 'h'},
+            margin: {t: 50, b: 50},
+            updatemenus: [{
+                type: 'buttons', showactive: false, x: 0.05, y: 0,
+                xanchor: 'left', yanchor: 'top',
+                buttons: [
+                    {
+                        label: '▶ Play', method: 'animate',
+                        args: [null, {fromcurrent: true, frame: {duration: 600, redraw: true}, transition: {duration: 200}}]
+                    },
+                    {
+                        label: '⏸ Pause', method: 'animate',
+                        args: [[null], {mode: 'immediate', frame: {duration: 0}}]
+                    },
+                ],
+            }],
+            sliders: [{
+                steps: frames.map((f, i) => ({
+                    label: String(i + 1), method: 'animate',
+                    args: [[f.name], {mode: 'immediate', frame: {duration: 0, redraw: true}}]
+                })),
+                x: 0.05, len: 0.9, y: 0, yanchor: 'top',
+                currentvalue: {prefix: 'Step: ', visible: true, xanchor: 'center'},
+            }],
+        };
+
+        Plotly.newPlot('main-chart', frames[0]?.data || baseTraces, layout, {responsive: true})
+            .then(() => Plotly.addFrames('main-chart', frames));
+    }
+
+    function renderPathChart(history) {
+        Plotly.newPlot('path-chart', [{
+            y: history,
+            type: 'scatter', mode: 'lines+markers',
+            line: {color: '#4c72b0'},
+            marker: {color: '#e74c3c', size: 5},
+            name: 'x value',
+        }], {
+            title: {text: 'Gradient Descent Path', font: {size: 15}},
+            xaxis: {title: 'Iteration'},
+            yaxis: {title: 'x value'},
+            margin: {t: 50, b: 50},
+        }, {responsive: true});
+    }
+
+    function renderStats(history, iter) {
+        const final = history[history.length - 1];
+        document.getElementById('stats').innerHTML = `
+            <div class="stat"><div class="stat-label">Final x</div><div class="stat-value">${final.toFixed(4)}</div></div>
+            <div class="stat"><div class="stat-label">f(x) at final</div><div class="stat-value">${(final * final).toFixed(4)}</div></div>
+            <div class="stat"><div class="stat-label">Gradient at final</div><div class="stat-value">${(2 * final).toFixed(4)}</div></div>
+            <div class="stat"><div class="stat-label">Iterations</div><div class="stat-value">${iter}</div></div>
+        `;
+    }
+
+    run();
+</script>
+</body>
+</html>
