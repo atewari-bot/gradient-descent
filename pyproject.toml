@@ -1,0 +1,13 @@
+[project]
+name = "gradient-descent"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "streamlit",
+    "pandas",
+    "numpy",
+    "matplotlib",
+]
+
+[project.scripts]
+app = "app:main"
