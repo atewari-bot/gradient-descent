@@ -55,8 +55,8 @@
     </div>
 
     <div class="chart-card" id="main-chart"></div>
-    <div class="chart-card" id="path-chart"></div>
-    <div class="stats" id="stats"></div>
+    <div class="chart-card" id="path-chart" style="display:none;"></div>
+    <div class="stats" id="stats" style="display:none;"></div>
 </div>
 
 <script>
@@ -73,6 +73,10 @@
         btn.disabled = true;
         btn.textContent = 'Running…';
 
+        // Hide second chart when re-running
+        document.getElementById('path-chart').style.display = 'none';
+        document.getElementById('stats').style.display = 'none';
+
         const lr = parseFloat(document.getElementById('learning-rate').value);
         const iter = parseInt(document.getElementById('iterations').value);
         const ip = parseFloat(document.getElementById('initial-point').value);
@@ -84,16 +88,14 @@
                 body: JSON.stringify({learning_rate: lr, iterations: iter, initial_point: ip})
             });
             const data = await resp.json();
-            renderMainChart(data.history, data.function_values);
-            renderPathChart(data.history);
-            renderStats(data.history, iter);
+            renderMainChart(data.history, data.function_values, iter);
         } finally {
             btn.disabled = false;
             btn.textContent = 'Run';
         }
     }
 
-    function renderMainChart(history, fvals) {
+    function renderMainChart(history, fvals, iter) {
         const x = linspace(-11, 11, 400);
         const y = x.map(xi => xi * xi);
         const dy = x.map(xi => 2 * xi);
@@ -133,16 +135,25 @@
             return {name: String(i), data: traces};
         });
 
+        const lastFrame = String(frames.length - 1);
+
+        function showSecondChart() {
+            renderPathChart(history);
+            renderStats(history, iter);
+            document.getElementById('path-chart').style.display = 'block';
+            document.getElementById('stats').style.display = 'grid';
+        }
+
         const layout = {
             title: {text: 'Gradient Descent — Step by Step', font: {size: 15}},
             xaxis: {title: 'x', range: [-11, 11], zeroline: true},
             yaxis: {title: 'f(x)', range: [-15, 125], zeroline: true},
             legend: {x: 0.5, y: 1.08, xanchor: 'center', orientation: 'h'},
-            height: 560,
-            margin: {t: 60, b: 160, l: 60, r: 20},
+            height: 580,
+            margin: {t: 60, b: 220, l: 60, r: 20},
             updatemenus: [{
                 type: 'buttons', showactive: false,
-                x: 0.05, y: -0.18, xanchor: 'left', yanchor: 'top',
+                x: 0.05, y: -0.32, xanchor: 'left', yanchor: 'top',
                 buttons: [
                     {
                         label: '▶ Play', method: 'animate',
@@ -159,14 +170,26 @@
                     label: String(i + 1), method: 'animate',
                     args: [[f.name], {mode: 'immediate', frame: {duration: 0, redraw: true}}]
                 })),
-                x: 0.05, len: 0.9, y: -0.05, yanchor: 'top',
+                x: 0.05, len: 0.9, y: -0.1, yanchor: 'top',
                 pad: {t: 10},
                 currentvalue: {prefix: 'Step: ', visible: true, xanchor: 'center', font: {size: 13}},
             }],
         };
 
         Plotly.newPlot('main-chart', frames[0]?.data || baseTraces, layout, {responsive: true})
-            .then(() => Plotly.addFrames('main-chart', frames));
+            .then(() => {
+                Plotly.addFrames('main-chart', frames);
+
+                const el = document.getElementById('main-chart');
+
+                // Show second chart when animation plays to the end
+                el.on('plotly_animated', showSecondChart);
+
+                // Show second chart when user scrubs to the last frame manually
+                el.on('plotly_sliderchange', e => {
+                    if (String(e.slider.active) === lastFrame) showSecondChart();
+                });
+            });
     }
 
     function renderPathChart(history) {
