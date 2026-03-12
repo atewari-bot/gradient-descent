@@ -20,6 +20,12 @@
         button:hover { background: #e03e3e; }
         button:disabled { background: #ccc; cursor: default; }
         .chart-card { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; padding: 4px; min-height: 500px; }
+        .chart-controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 8px; }
+        .ctrl-btn { padding: 8px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+        .ctrl-btn.play { background: #ff4b4b; color: white; box-shadow: 0 2px 6px rgba(255,75,75,0.4); }
+        .ctrl-btn.play:hover { background: #e03e3e; }
+        .ctrl-btn.pause { background: #e9ecef; color: #555; }
+        .ctrl-btn.pause:hover { background: #dee2e6; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 16px; }
         .stat { background: white; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         .stat-label { font-size: 0.78rem; color: #888; margin-bottom: 4px; }
@@ -54,6 +60,10 @@
         <button id="run-btn" onclick="run()">Run</button>
     </div>
 
+    <div class="chart-controls">
+        <button class="ctrl-btn play" onclick="playAnimation()">▶ Play</button>
+        <button class="ctrl-btn pause" onclick="pauseAnimation()">⏸ Pause</button>
+    </div>
     <div class="chart-card" id="main-chart"></div>
     <div class="chart-card" id="path-chart" style="display:none;"></div>
     <div class="stats" id="stats" style="display:none;"></div>
@@ -149,22 +159,8 @@
             xaxis: {title: 'x', range: [-11, 11], zeroline: true},
             yaxis: {title: 'f(x)', range: [-15, 125], zeroline: true},
             legend: {x: 0.5, y: 1.08, xanchor: 'center', orientation: 'h'},
-            height: 580,
-            margin: {t: 60, b: 220, l: 60, r: 20},
-            updatemenus: [{
-                type: 'buttons', showactive: false,
-                x: 0.05, y: -0.32, xanchor: 'left', yanchor: 'top',
-                buttons: [
-                    {
-                        label: '▶ Play', method: 'animate',
-                        args: [null, {fromcurrent: true, frame: {duration: 600, redraw: true}, transition: {duration: 200}}]
-                    },
-                    {
-                        label: '⏸ Pause', method: 'animate',
-                        args: [[null], {mode: 'immediate', frame: {duration: 0}}]
-                    },
-                ],
-            }],
+            height: 520,
+            margin: {t: 60, b: 120, l: 60, r: 20},
             sliders: [{
                 steps: frames.map((f, i) => ({
                     label: String(i + 1), method: 'animate',
@@ -216,6 +212,18 @@
             <div class="stat"><div class="stat-label">Gradient at final</div><div class="stat-value">${(2 * final).toFixed(4)}</div></div>
             <div class="stat"><div class="stat-label">Iterations</div><div class="stat-value">${iter}</div></div>
         `;
+    }
+
+    function playAnimation() {
+        Plotly.animate('main-chart', null, {
+            fromcurrent: true,
+            frame: {duration: 600, redraw: true},
+            transition: {duration: 200},
+        });
+    }
+
+    function pauseAnimation() {
+        Plotly.animate('main-chart', [null], {mode: 'immediate', frame: {duration: 0}});
     }
 
     run();
